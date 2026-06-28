@@ -1,0 +1,17 @@
+.home {
+    width: 100%;
+}
+
+.top-section {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.theory-panel {
+    flex: 7;
+}
+
+.sql-editor {
+    flex: 3;
+}

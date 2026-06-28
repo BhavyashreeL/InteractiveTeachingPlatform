@@ -1,0 +1,31 @@
+.sql-editor textarea{
+    width:100%;
+    height:220px;
+    font-family:Consolas;
+    font-size:15px;
+    padding:10px;
+    resize:none;
+}
+
+.output{
+    margin-top:20px;
+    max-height:220px;
+    overflow:auto;
+}
+
+.output table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.output th,
+.output td{
+    padding:8px;
+    border:1px solid #ccc;
+    text-align:center;
+}
+
+.output th{
+    background:#1565c0;
+    color:white;
+}

@@ -1,0 +1,22 @@
+.animation-panel{
+    margin-top:25px;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0px 2px 8px rgba(0,0,0,0.1);
+}
+
+.animation-panel h2{
+    color:#1e3a8a;
+    margin-bottom:15px;
+}
+
+.animation-box{
+    height:300px;
+    border:2px dashed #999;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:22px;
+    color:#777;
+}
