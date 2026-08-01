@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./StaffLogin.css";
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL } from "../../config";
 
 function StaffLogin({ onLogin, onShowSignup }) {
   const [email, setEmail] = useState("");

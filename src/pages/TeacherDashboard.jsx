@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
 import SqlEditor from "../components/SqlEditor/SqlEditor";
 import "./TeacherDashboard.css";
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL } from "../config";
 
 function TeacherDashboard({ user, onLogout }) {
   const [units, setUnits] = useState([]);
