@@ -1,0 +1,30 @@
+.workspace{
+
+width:100%;
+height:100vh;
+
+}
+
+
+.buttons{
+
+display:flex;
+gap:20px;
+padding:10px;
+
+}
+
+
+.buttons button{
+
+padding:10px 20px;
+cursor:pointer;
+
+}
+
+
+.content{
+
+height:80%;
+
+}

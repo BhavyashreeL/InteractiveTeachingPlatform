@@ -1,20 +1,21 @@
 import "./Navbar.css";
-import { FaMoon, FaBell, FaUserCircle } from "react-icons/fa";
+import { FaBell, FaUserCircle, FaMoon } from "react-icons/fa";
 
-function Navbar() {
+function Navbar({ user, onLogout }) {
   return (
     <header className="navbar">
-
-      <div className="logo">
-        🎓 BMSCE DBMS Interactive Teaching Platform
+      <div className="navbar-title">
+        <span className="logo">🎓</span>
+        <span>BMSCE DBMS Interactive Teaching Platform</span>
       </div>
 
-      <div className="nav-icons">
+      <div className="navbar-actions">
         <FaMoon />
         <FaBell />
-        <FaUserCircle />
-      </div>
+        <FaUserCircle title={user?.fullName} />
 
+        <button onClick={onLogout}>Logout</button>
+      </div>
     </header>
   );
 }

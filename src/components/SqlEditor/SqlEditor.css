@@ -1,31 +1,54 @@
-.sql-editor textarea{
-    width:100%;
-    height:220px;
-    font-family:Consolas;
-    font-size:15px;
-    padding:10px;
-    resize:none;
+.sql-editor {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 24px;
+  box-sizing: border-box;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
-.output{
-    margin-top:20px;
-    max-height:220px;
-    overflow:auto;
+.sql-editor h2 {
+  margin: 0 0 16px;
+  color: #002f65;
+  font-size: 28px;
 }
 
-.output table{
-    width:100%;
-    border-collapse:collapse;
+.sql-editor textarea {
+  width: 100%;
+  height: 280px;
+  padding: 14px;
+  box-sizing: border-box;
+  resize: none;
+  font-size: 16px;
+  font-family: monospace;
 }
 
-.output th,
-.output td{
-    padding:8px;
-    border:1px solid #ccc;
-    text-align:center;
+.sql-actions {
+  display: flex;
+  gap: 20px;
+  margin: 24px 0;
 }
 
-.output th{
-    background:#1565c0;
-    color:white;
+.sql-actions button {
+  flex: 1;
+  height: 42px;
+  border: none;
+  border-radius: 5px;
+  background-color: #1e6bbc;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.db-status {
+  color: red;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.sql-output {
+  min-height: 180px;
+  border: 1px solid #ddd;
+  padding: 14px;
+  box-sizing: border-box;
+  font-size: 18px;
 }

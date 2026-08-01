@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# dependencies
+node_modules/
+backend/node_modules/
+
+# build output
+dist/
+build/
+
+# env files
+.env
+.env.local
+.env.production
+backend/.env
+
+# local database and uploaded files
+backend/data/
+backend/uploads/
+
+# system files
+.DS_Store
+Thumbs.db

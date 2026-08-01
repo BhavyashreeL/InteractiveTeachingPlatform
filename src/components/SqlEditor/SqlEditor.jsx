@@ -1,65 +1,23 @@
-import { useEffect, useState } from "react";
-import initSqlJs from "sql.js";
+import { useState } from "react";
 import "./SqlEditor.css";
 
 function SqlEditor() {
-  const [db, setDb] = useState(null);
-  const [query, setQuery] = useState(``);
-  const [result, setResult] = useState([]);
-  const [message, setMessage] = useState("Loading Database...");
+  const [query, setQuery] = useState("");
+  const [output, setOutput] = useState("No Output");
 
-  // Load SQL.js database
-  useEffect(() => {
-    async function loadDatabase() {
-      try {
-        const SQL = await initSqlJs({
-          locateFile: () => "/sql-wasm.wasm",
-        });
-
-        const database = new SQL.Database();
-
-        setDb(database);
-        setMessage("Database Ready");
-      } catch (err) {
-        console.error(err);
-        setMessage("Failed to load database");
-      }
-    }
-
-    loadDatabase();
-  }, []);
-
-  // Execute SQL
-  const executeSQL = () => {
-    if (!db) {
-      setMessage("Database is still loading...");
+  function handleExecute() {
+    if (!query.trim()) {
+      setOutput("Please write a SQL query.");
       return;
     }
 
-    try {
-      const statements = query
-        .split(";")
-        .map((s) => s.trim())
-        .filter((s) => s.length);
+    setOutput("Query execution will be implemented here.");
+  }
 
-      let output = [];
-
-      statements.forEach((statement) => {
-        if (statement.toUpperCase().startsWith("SELECT")) {
-          output = db.exec(statement);
-        } else {
-          db.run(statement);
-        }
-      });
-
-      setResult(output);
-      setMessage("Executed Successfully");
-    } catch (err) {
-      console.error(err);
-      setMessage(err.message);
-      setResult([]);
-    }
-  };
+  function handleClear() {
+    setQuery("");
+    setOutput("No Output");
+  }
 
   return (
     <div className="sql-editor">
@@ -71,47 +29,14 @@ function SqlEditor() {
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      <div className="buttons">
-        <button onClick={executeSQL}>Execute</button>
-
-        <button
-          onClick={() => {
-            setQuery("");
-            setResult([]);
-            setMessage("Editor Cleared");
-          }}
-        >
-          Clear
-        </button>
+      <div className="sql-actions">
+        <button onClick={handleExecute}>Execute</button>
+        <button onClick={handleClear}>Clear</button>
       </div>
 
-      <p className="message">{message}</p>
+      <p className="db-status">Database Ready</p>
 
-      <div className="output">
-        {result.length > 0 ? (
-          <table>
-            <thead>
-              <tr>
-                {result[0].columns.map((col) => (
-                  <th key={col}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {result[0].values.map((row, index) => (
-                <tr key={index}>
-                  {row.map((cell, i) => (
-                    <td key={i}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p>No Output</p>
-        )}
-      </div>
+      <div className="sql-output">{output}</div>
     </div>
   );
 }
