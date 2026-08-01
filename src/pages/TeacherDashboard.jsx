@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar/Navbar";
 import Sidebar from "../components/Sidebar/Sidebar";
 import SqlEditor from "../components/SqlEditor/SqlEditor";
 import "./TeacherDashboard.css";
+import { API_BASE_URL } from "./config";
 
 function TeacherDashboard({ user, onLogout }) {
   const [units, setUnits] = useState([]);
@@ -18,7 +19,7 @@ function TeacherDashboard({ user, onLogout }) {
     async function fetchUnits() {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/users/${user.userId}/units`
+          `${API_BASE_URL}/api/users/${user.userId}/units`
         );
 
         const data = await response.json();
@@ -114,7 +115,7 @@ async function handleFileUpload(event, selectedUnit) {
 
   try {
     const response = await fetch(
-      `http://localhost:5000/api/units/${selectedUnit.assignmentId}/upload-slides`,
+      `${API_BASE_URL}/api/units/${selectedUnit.assignmentId}/upload-slides`,
       {
         method: "POST",
         body: formData
@@ -161,7 +162,7 @@ async function fetchSlides(fileId) {
     setSlidesLoading(true);
 
     const response = await fetch(
-      `http://localhost:5000/api/files/${fileId}/slides`
+      `${API_BASE_URL}/api/files/${fileId}/slides`
     );
 
     const data = await response.json();
@@ -301,7 +302,7 @@ function closeFullscreen() {
 
                     <div className="slide-image-wrapper">
                     <img
-                        src={`http://localhost:5000${slides[currentSlideIndex].slideImagePath}`}
+                        src={`${API_BASE_URL}${slides[currentSlideIndex].slideImagePath}`}
                         alt={`Slide ${currentSlideIndex + 1}`}
                         className="slide-image"
                     />
@@ -393,7 +394,7 @@ function closeFullscreen() {
             </button>
 
             <img
-                src={`http://localhost:5000${slides[currentSlideIndex].slideImagePath}`}
+                src={`${API_BASE_URL}${slides[currentSlideIndex].slideImagePath}`}
                 alt={`Slide ${currentSlideIndex + 1}`}
                 className="fullscreen-image"
             />
