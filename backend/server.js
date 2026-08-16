@@ -409,16 +409,61 @@ app.post("/api/signup", async (req, res) => {
 });
 
 /* -------------------- UPLOAD SLIDE IMAGES -------------------- */
+async function deleteSupabaseFolder(folderPath) {
+  if (!folderPath) {
+    return;
+  }
+
+  const { data: files, error: listError } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .list(folderPath, {
+      limit: 1000
+    });
+
+  if (listError) {
+    throw listError;
+  }
+
+  if (!files || files.length === 0) {
+    return;
+  }
+
+  const filePaths = files
+    .filter((file) => file.id !== null)
+    .map((file) => `${folderPath}/${file.name}`);
+
+  if (filePaths.length === 0) {
+    return;
+  }
+
+  const { error: deleteError } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .remove(filePaths);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  console.log(
+    `Deleted ${filePaths.length} files from ${folderPath}`
+  );
+}
 
 app.post(
   "/api/units/:assignmentId/upload-slides",
   upload.array("slides", 100),
   async (req, res) => {
     let tx;
+    let newFolderStoragePath = null;
+    let newUploadCommitted = false;
 
     try {
       const { assignmentId } = req.params;
       const { uploadedByUserId } = req.body;
+
+      // ---------------------------------------------------
+      // Validation
+      // ---------------------------------------------------
 
       if (!uploadedByUserId) {
         return res.status(400).json({
@@ -432,62 +477,124 @@ app.post(
         });
       }
 
+      // ---------------------------------------------------
+      // Find previous slide uploads for this assignment
+      // ---------------------------------------------------
+
+      const previousFilesResult = await db.execute({
+        sql: `
+          SELECT
+            FileId AS fileId,
+            StoredFilePath AS storedFilePath
+          FROM UnitUploadedFiles
+          WHERE AssignmentId = ?
+            AND FileType = 'image-folder'
+        `,
+        args: [assignmentId]
+      });
+
+      const previousFiles = previousFilesResult.rows || [];
+
+      // ---------------------------------------------------
+      // Create new upload folder
+      // ---------------------------------------------------
+
       const folderName = `slides_${Date.now()}`;
 
+      newFolderStoragePath =
+        `assignment_${assignmentId}/${folderName}`;
+
+      // Sort files naturally:
+      // slide_1, slide_2, slide_10
+      // instead of slide_1, slide_10, slide_2
       const sortedFiles = [...req.files].sort((a, b) =>
-        a.originalname.localeCompare(b.originalname, undefined, {
-          numeric: true,
-          sensitivity: "base"
-        })
+        a.originalname.localeCompare(
+          b.originalname,
+          undefined,
+          {
+            numeric: true,
+            sensitivity: "base"
+          }
+        )
       );
 
       const uploadedSlides = [];
 
-      for (let index = 0; index < sortedFiles.length; index++) {
+      // ---------------------------------------------------
+      // Upload new slides to Supabase
+      // ---------------------------------------------------
+
+      for (
+        let index = 0;
+        index < sortedFiles.length;
+        index++
+      ) {
         const file = sortedFiles[index];
-        const cleanName = safeFileName(file.originalname);
 
-        const storagePath = `assignment_${assignmentId}/${folderName}/${cleanName}`;
+        const cleanName = safeFileName(
+          file.originalname
+        );
 
-        const { error: uploadError } = await supabase.storage
-          .from(SUPABASE_BUCKET)
-          .upload(storagePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true
-          });
+        const storagePath =
+          `${newFolderStoragePath}/${cleanName}`;
+
+        const { error: uploadError } =
+          await supabase.storage
+            .from(SUPABASE_BUCKET)
+            .upload(
+              storagePath,
+              file.buffer,
+              {
+                contentType: file.mimetype,
+                upsert: true
+              }
+            );
 
         if (uploadError) {
           throw uploadError;
         }
 
-        const { data: publicUrlData } = supabase.storage
-          .from(SUPABASE_BUCKET)
-          .getPublicUrl(storagePath);
+        const { data: publicUrlData } =
+          supabase.storage
+            .from(SUPABASE_BUCKET)
+            .getPublicUrl(storagePath);
 
         uploadedSlides.push({
           slideNumber: index + 1,
           originalName: file.originalname,
           storedFileName: cleanName,
           storagePath,
-          slideImagePath: publicUrlData.publicUrl,
+          slideImagePath:
+            publicUrlData.publicUrl,
           size: file.size
         });
       }
 
-      const totalSize = sortedFiles.reduce((sum, file) => sum + file.size, 0);
+      const totalSize = sortedFiles.reduce(
+        (sum, file) => sum + file.size,
+        0
+      );
+
+      // ---------------------------------------------------
+      // Start DB transaction
+      // ---------------------------------------------------
 
       tx = await db.transaction("write");
 
+      // Mark existing slide upload as no longer current
       await tx.execute({
         sql: `
           UPDATE UnitUploadedFiles
           SET IsCurrent = 0
           WHERE AssignmentId = ?
+            AND FileType = 'image-folder'
         `,
         args: [assignmentId]
       });
 
-      const folderStoragePath = `assignment_${assignmentId}/${folderName}`;
+      // ---------------------------------------------------
+      // Insert new UnitUploadedFiles record
+      // ---------------------------------------------------
 
       const insertFileResult = await tx.execute({
         sql: `
@@ -507,14 +614,20 @@ app.post(
           assignmentId,
           "Slide Images Folder",
           folderName,
-          folderStoragePath,
+          newFolderStoragePath,
           "image-folder",
           totalSize,
           uploadedByUserId
         ]
       });
 
-      const newFileId = Number(insertFileResult.lastInsertRowid);
+      const newFileId = Number(
+        insertFileResult.lastInsertRowid
+      );
+
+      // ---------------------------------------------------
+      // Insert individual slide records
+      // ---------------------------------------------------
 
       for (const slide of uploadedSlides) {
         await tx.execute({
@@ -527,33 +640,182 @@ app.post(
             )
             VALUES (?, ?, ?, NULL)
           `,
-          args: [newFileId, slide.slideNumber, slide.slideImagePath]
+          args: [
+            newFileId,
+            slide.slideNumber,
+            slide.slideImagePath
+          ]
         });
       }
 
+      // ---------------------------------------------------
+      // Commit new upload
+      // ---------------------------------------------------
+
       await tx.commit();
+
+      // Important:
+      // Prevent the catch block from attempting to
+      // rollback an already committed transaction.
+      tx = null;
+
+      newUploadCommitted = true;
+
+      console.log(
+        `New slides successfully saved. FileId: ${newFileId}`
+      );
+
+      // ---------------------------------------------------
+      // Clean up PREVIOUS uploads
+      //
+      // This happens AFTER the new upload has successfully
+      // committed so we don't lose the old slides if the
+      // new upload fails.
+      // ---------------------------------------------------
+
+      for (const previousFile of previousFiles) {
+        try {
+          console.log(
+            `Cleaning previous slide upload. FileId: ${previousFile.fileId}`
+          );
+
+          // -----------------------------------------------
+          // Delete old files from Supabase
+          // -----------------------------------------------
+
+          if (previousFile.storedFilePath) {
+            await deleteSupabaseFolder(
+              previousFile.storedFilePath
+            );
+          }
+
+          // -----------------------------------------------
+          // Delete old DB records
+          // -----------------------------------------------
+
+          const cleanupTx =
+            await db.transaction("write");
+
+          try {
+            // Delete child records first
+            await cleanupTx.execute({
+              sql: `
+                DELETE FROM UnitFileSlides
+                WHERE FileId = ?
+              `,
+              args: [previousFile.fileId]
+            });
+
+            // Then delete parent record
+            await cleanupTx.execute({
+              sql: `
+                DELETE FROM UnitUploadedFiles
+                WHERE FileId = ?
+                  AND IsCurrent = 0
+              `,
+              args: [previousFile.fileId]
+            });
+
+            await cleanupTx.commit();
+
+            console.log(
+              `Previous slide upload cleaned successfully. FileId: ${previousFile.fileId}`
+            );
+          } catch (cleanupDbError) {
+            try {
+              await cleanupTx.rollback();
+            } catch (rollbackError) {
+              console.error(
+                "Cleanup rollback error:",
+                rollbackError
+              );
+            }
+
+            throw cleanupDbError;
+          }
+        } catch (cleanupError) {
+          // Do NOT fail the new upload just because
+          // old-file cleanup failed.
+          console.error(
+            `Unable to clean previous slide upload FileId ${previousFile.fileId}:`,
+            cleanupError
+          );
+        }
+      }
+
+      // ---------------------------------------------------
+      // Return new upload
+      // ---------------------------------------------------
 
       return res.status(201).json({
         message: "Slides uploaded successfully",
         file: {
           fileId: newFileId,
-          originalFileName: "Slide Images Folder",
-          storedFilePath: folderStoragePath,
+          originalFileName:
+            "Slide Images Folder",
+          storedFilePath:
+            newFolderStoragePath,
           fileSizeBytes: totalSize,
-          slides: uploadedSlides.map((slide) => ({
-            slideNumber: slide.slideNumber,
-            slideImagePath: slide.slideImagePath
-          }))
+
+          slides: uploadedSlides.map(
+            (slide) => ({
+              slideNumber:
+                slide.slideNumber,
+              slideImagePath:
+                slide.slideImagePath
+            })
+          )
         }
       });
     } catch (err) {
-      console.error("Upload slides error:", err);
+      console.error(
+        "Upload slides error:",
+        err
+      );
+
+      // ---------------------------------------------------
+      // Rollback DB transaction if it hasn't committed
+      // ---------------------------------------------------
 
       if (tx) {
         try {
           await tx.rollback();
         } catch (rollbackErr) {
-          console.error("Upload rollback error:", rollbackErr);
+          console.error(
+            "Upload rollback error:",
+            rollbackErr
+          );
+        }
+      }
+
+      // ---------------------------------------------------
+      // Remove partially uploaded NEW Supabase files
+      //
+      // Example:
+      // slide 1 uploaded
+      // slide 2 uploaded
+      // slide 3 failed
+      //
+      // We don't want slides 1 & 2 left behind.
+      // ---------------------------------------------------
+
+      if (
+        newFolderStoragePath &&
+        !newUploadCommitted
+      ) {
+        try {
+          await deleteSupabaseFolder(
+            newFolderStoragePath
+          );
+
+          console.log(
+            `Cleaned incomplete upload: ${newFolderStoragePath}`
+          );
+        } catch (cleanupError) {
+          console.error(
+            "Unable to clean incomplete Supabase upload:",
+            cleanupError
+          );
         }
       }
 
