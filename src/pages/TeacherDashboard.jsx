@@ -84,7 +84,7 @@ function TeacherDashboard({ user, onLogout }) {
     }, [selectedMenu, units]);
 
 async function handleFileUpload(event, selectedUnit) {
-  const input = input.files;
+  const input = event.target;
   const files = Array.from(input.files);
 
   if (!files || files.length === 0) {
