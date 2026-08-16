@@ -302,7 +302,7 @@ function closeFullscreen() {
 
                     <div className="slide-image-wrapper">
                     <img
-                        src={`${API_BASE_URL}${slides[currentSlideIndex].slideImagePath}`}
+                        src={`${slides[currentSlideIndex].slideImagePath}`}
                         alt={`Slide ${currentSlideIndex + 1}`}
                         className="slide-image"
                     />
@@ -394,7 +394,7 @@ function closeFullscreen() {
             </button>
 
             <img
-                src={`${API_BASE_URL}${slides[currentSlideIndex].slideImagePath}`}
+                src={`${slides[currentSlideIndex].slideImagePath}`}
                 alt={`Slide ${currentSlideIndex + 1}`}
                 className="fullscreen-image"
             />
