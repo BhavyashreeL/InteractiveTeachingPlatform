@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./Signup.css";
+import { API_BASE_URL } from "../../config";
 
 function Signup({ onBackToLogin }) {
   const [email, setEmail] = useState("");
@@ -22,7 +23,7 @@ function Signup({ onBackToLogin }) {
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:5000/api/signup", {
+      const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
