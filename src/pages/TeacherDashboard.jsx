@@ -14,6 +14,7 @@ function TeacherDashboard({ user, onLogout }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [slidesLoading, setSlidesLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     async function fetchUnits() {
@@ -83,7 +84,8 @@ function TeacherDashboard({ user, onLogout }) {
     }, [selectedMenu, units]);
 
 async function handleFileUpload(event, selectedUnit) {
-  const files = Array.from(event.target.files);
+  const input = input.files;
+  const files = Array.from(input.files);
 
   if (!files || files.length === 0) {
     return;
@@ -101,7 +103,7 @@ async function handleFileUpload(event, selectedUnit) {
 
   if (invalidFile) {
     alert("Only PNG, JPG, JPEG, and WEBP images are allowed.");
-    event.target.value = "";
+    input.value = "";
     return;
   }
 
@@ -114,6 +116,9 @@ async function handleFileUpload(event, selectedUnit) {
   formData.append("uploadedByUserId", user.userId);
 
   try {
+    // Start spinner
+    setIsUploading(true);
+
     const response = await fetch(
       `${API_BASE_URL}/api/units/${selectedUnit.assignmentId}/upload-slides`,
       {
@@ -148,7 +153,11 @@ async function handleFileUpload(event, selectedUnit) {
     console.error("Upload error:", err);
     alert("Unable to upload slides. Please check backend.");
   } finally {
-    event.target.value = "";
+    // Stop spinner whether upload succeeds or fails
+    setIsUploading(false);
+
+    // Allow same files to be selected again
+    input.value = "";
   }
 }
 
@@ -258,17 +267,29 @@ function closeFullscreen() {
                 )}
 
               <div className="unit-actions">
-                <label className="primary-btn file-upload-label">
-                    Upload Slide Images
-                    <input
+                <label
+                  className={`primary-btn file-upload-label ${isUploading ? "uploading" : ""}`}
+                  aria-disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <span className="upload-spinner"></span>
+                      Uploading Slides...
+                    </>
+                  ) : (
+                    "Upload Slide Images"
+                  )}
+
+                  <input
                     type="file"
                     accept=".png,.jpg,.jpeg,.webp"
                     multiple
                     onChange={(event) => handleFileUpload(event, selectedUnit)}
+                    disabled={isUploading}
                     hidden
-                    />
+                  />
                 </label>
-                </div>
+              </div>
 
                 {slidesLoading && <p>Loading slides...</p>}
 
